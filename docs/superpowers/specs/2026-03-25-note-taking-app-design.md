@@ -8,8 +8,9 @@ A document-centric, Obsidian-like note-taking app built with JavaFX 26 and the n
 
 - **Document-centric:** Each note is a standalone `.md` file in a vault folder.
 - **Markdown on disk:** Plain `.md` files, editable outside the app. No hidden databases or metadata folders.
-- **Link resolution:** `[[My Note]]` resolves to `My Note.md` anywhere in the vault by case-insensitive filename match. Ambiguous matches prompt the user.
-- **Multi-vault:** Users can open and switch between multiple vaults, IntelliJ-style (vault selector in command palette).
+- **Link resolution:** `[[My Note]]` resolves to `My Note.md` anywhere in the vault by case-insensitive filename match. Ambiguous matches show a palette-style picker to disambiguate.
+- **Multi-vault:** Users can open and switch between multiple vaults, IntelliJ-style (vault selector in command palette). Switching vaults prompts to save dirty notes, then closes the current vault entirely before opening the new one.
+- **Single-document editor:** One note open at a time. No tabs. Navigation history (`Alt+Left/Right`) provides quick switching between recent notes.
 
 ## Layout
 
@@ -130,9 +131,13 @@ RichTextModel ──────────────────────
 | `- list item` | bullet attribute |
 | code block | monospace, paragraph background |
 
-**WYSIWYG behavior:** Markdown syntax markers are hidden in rendered view. When the caret enters a formatted region, the raw markdown syntax is revealed for editing. When the caret leaves, it collapses back to rendered form. Implemented by listening to `caretPositionProperty()` and toggling segments between rendered and raw states.
+**WYSIWYG behavior:** The model always contains the full markdown source. Rendering hides syntax markers visually rather than removing them from the model. This is achieved through styling — syntax markers (`**`, `#`, `[[`, `]]`, etc.) are styled with zero-width or transparent/dimmed text. When the caret enters a formatted region (defined as the current paragraph for block elements, or the current inline span for inline elements), the syntax markers in that region are restyled to be visible for editing.
 
-**Serializer:** Walks `RichTextModel` segments and emits markdown based on style attributes (bold → `**`, heading → `#`, etc.).
+This approach avoids model mutations on caret movement, preserving undo/redo integrity and keeping character offsets stable. The caret position listener triggers a restyle pass on the affected paragraph only.
+
+**Round-trip fidelity:** The source markdown is preserved as the canonical representation. The model is rebuilt from source on open, and serialization writes back the source with any edits applied. This means the serializer does not need to "guess" markdown from styles — it tracks the original markdown structure and applies delta edits.
+
+**Serializer:** Maintains a mapping between model segments and their source markdown ranges. On save, applies edits (insertions, deletions, formatting changes) to the original markdown text. New formatted text created by the user (e.g., making text bold via a shortcut) generates the appropriate markdown markers (`**`). Nested styles produce nested markers (`***bold+italic***`).
 
 **Custom style attributes:**
 
@@ -143,6 +148,8 @@ StyleAttribute<Boolean> CODE_BLOCK = new StyleAttribute<>("CODE_BLOCK", Boolean.
 ```
 
 **Supported markdown subset (MVP):** Headings (1-6), bold, italic, inline code, code blocks, bullet lists, ordered lists, blockquotes, horizontal rules, links, images, `[[wikilinks]]`.
+
+**Images:** Loaded from relative paths within the vault (e.g., `![](images/photo.png)` resolves relative to the note's directory). Rendered as inline `ImageView` nodes embedded in the RichTextArea. Missing images show a placeholder with the path.
 
 ## Event Bus & Core Services
 
@@ -160,7 +167,7 @@ EventBus
 - `VaultOpened(Vault)`, `VaultClosed()`
 - `NoteOpened(Note)`, `NoteSaved(Note)`, `NoteCreated(Path)`, `NoteDeleted(Path)`, `NoteRenamed(Path, Path)`, `NoteExternallyChanged(Path)`
 - `LinkClicked(String target)`
-- `SearchRequested(String query)`, `CommandPaletteOpened()`
+- `SearchRequested(String query)`, `CommandPaletteOpened()`, `CommandPaletteClosed()`
 - `ThemeChanged(String)`, `SettingChanged(String, Object)`
 
 **Services:**
@@ -169,11 +176,15 @@ EventBus
 VaultManager — vault lifecycle, note CRUD, file scanning
 LinkIndex — link graph: outgoing links, backlinks, link resolution
 SearchEngine — full-text search with title fuzzy match and content search with context snippets
-NoteEditor — open/save notes, dirty tracking, markdown ↔ model conversion
+NoteEditor (service) — open/save notes, dirty tracking, markdown ↔ model conversion (business logic, no UI)
 ConfigManager — load/save app config from ~/.config/orgx/config.json
 FileWatcher — WatchService on vault directory, fires NoteExternallyChanged events
 NavigationHistory — back/forward note history stack
 ```
+
+**NoteEditor vs NoteEditorPanel:** `NoteEditor` is the service that holds business logic (open, save, dirty tracking, markdown conversion). `NoteEditorPanel` is the JavaFX `Node` that wraps the `RichTextArea` and handles UI concerns (caret-reveal styling, click handlers, scroll behavior). The panel delegates to the service for all data operations.
+
+**AppShell:** The root `BorderPane` that assembles the layout — places the `SplitPane` in center, `StatusBar` in bottom, and manages sidebar visibility toggling.
 
 **AppContext** creates all services at startup, wires them with the EventBus.
 
@@ -248,6 +259,14 @@ Switching replaces the stylesheet on the scene. Tokens cover: backgrounds, foreg
 - JUnit 5 (test scope)
 
 **No other external dependencies.** File watching, search indexing, event bus — all built with standard Java APIs.
+
+**Search engine details:** In-memory inverted index built on vault open. Each note's content is tokenized and indexed. Title search uses substring matching with recently-opened notes boosted to the top. Content search scans the index and returns matching lines with surrounding context. Sufficient for vaults up to ~10k notes. No external search library needed.
+
+**Config persistence:** `VaultConfig` is serialized as JSON using a simple hand-written serializer (the config structure is flat — no need for a JSON library). Alternatively, `java.util.Properties` can be used if JSON proves cumbersome without a library.
+
+**Dirty state UX:** A modified note shows a dot indicator in the window title or file tree (e.g., "My Note *"). Closing a dirty note or switching vaults prompts a save dialog (Save / Discard / Cancel). Closing the app with dirty notes also prompts.
+
+**FileWatcher limitation:** Linux inotify has a per-user watch limit (default ~8192). For very large vaults with many subdirectories, the watcher may need to fall back to periodic polling. For MVP, the WatchService approach is sufficient.
 
 ## Package Structure
 
