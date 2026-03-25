@@ -175,7 +175,7 @@ EventBus
 ```
 VaultManager — vault lifecycle, note CRUD, file scanning
 LinkIndex — link graph: outgoing links, backlinks, link resolution
-SearchEngine — full-text search with title fuzzy match and content search with context snippets
+SearchEngine — Lucene-backed full-text search: title fuzzy match, content search with highlighted snippets, incremental indexing
 NoteEditor (service) — open/save notes, dirty tracking, markdown ↔ model conversion (business logic, no UI)
 ConfigManager — load/save app config from ~/.config/orgx/config.json
 FileWatcher — WatchService on vault directory, fires NoteExternallyChanged events
@@ -256,11 +256,32 @@ Switching replaces the stylesheet on the scene. Tokens cover: backgrounds, foreg
 - JavaFX 26 (`javafx-controls`)
 - Log4j2 (`log4j-api`, `log4j-core`) 2.25.3
 - commonmark-java (`commonmark`) 0.24.0
+- Apache Lucene (`lucene-core`, `lucene-queryparser`, `lucene-highlighter`) 10.x
 - JUnit 5 (test scope)
 
-**No other external dependencies.** File watching, search indexing, event bus — all built with standard Java APIs.
+File watching, event bus — built with standard Java APIs.
 
-**Search engine details:** In-memory inverted index built on vault open. Each note's content is tokenized and indexed. Title search uses substring matching with recently-opened notes boosted to the top. Content search scans the index and returns matching lines with surrounding context. Sufficient for vaults up to ~10k notes. No external search library needed.
+**Search engine (Lucene-backed):**
+
+Uses Apache Lucene with an in-memory (`ByteBuffersDirectory`) index. Each note is a Lucene document with fields:
+
+| Field | Type | Purpose |
+|---|---|---|
+| `path` | StringField (stored) | Absolute path, for retrieval |
+| `title` | TextField (stored) | Note title, for title search and display |
+| `content` | TextField (stored) | Full note content, for content search |
+| `modified` | LongField | Last modified timestamp, for incremental updates |
+
+**Features leveraged:**
+- **BM25 ranking** — default scorer, better relevance than TF-IDF
+- **Fuzzy search** — `FuzzyQuery` for typo-tolerant title matching in the command palette
+- **Phrase search** — `"exact phrase"` queries in content search
+- **Boolean queries** — combinable terms (e.g., `+tag:java +title:notes`)
+- **Incremental updates** — only re-index notes whose `modified` timestamp changed since last index
+- **Snippet highlighting** — `UnifiedHighlighter` to generate context snippets with match highlights for content search results
+- **Recent notes boost** — custom `BoostQuery` wrapper on recently-opened notes during title search
+
+**Index lifecycle:** Index is built on vault open (fast — Lucene indexes thousands of small docs in under a second). On `NoteSaved` or `NoteExternallyChanged`, only the affected document is re-indexed. On `NoteDeleted`, the document is removed. The index lives in memory only — rebuilt on each vault open, no persistence needed.
 
 **Config persistence:** `VaultConfig` is serialized as JSON using a simple hand-written serializer (the config structure is flat — no need for a JSON library). Alternatively, `java.util.Properties` can be used if JSON proves cumbersome without a library.
 
