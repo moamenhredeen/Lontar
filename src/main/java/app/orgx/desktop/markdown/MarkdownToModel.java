@@ -39,6 +39,11 @@ public class MarkdownToModel {
         }
 
         StyledTextModel build() {
+            // Ensure the model has at least one paragraph — SimpleViewOnlyStyledModel
+            // starts with 0 paragraphs, and RichTextArea crashes on empty models.
+            if (model.size() == 0) {
+                model.addSegment("", StyleAttributeMap.EMPTY);
+            }
             return model;
         }
 
