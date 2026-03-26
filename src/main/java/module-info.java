@@ -1,6 +1,7 @@
 module app.orgx.desktop {
     requires javafx.controls;
     requires jfx.incubator.richtext;
+    requires java.desktop;
     requires org.apache.logging.log4j;
     requires org.commonmark;
     requires org.apache.lucene.core;
