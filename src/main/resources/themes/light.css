@@ -7,9 +7,27 @@
     -fx-font-size: 14px;
 }
 
-/* File tree */
+/* File tree — flat, no focus ring */
 .file-tree {
     -fx-background-color: #f0f0f0;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.file-tree .tree-view {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.file-tree .tree-view:focused {
+    -fx-border-color: transparent;
+}
+
+.file-tree .tree-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
 .file-tree .tree-cell:selected {
@@ -17,8 +35,31 @@
     -fx-text-fill: #1a1a1a;
 }
 
-/* Editor */
+/* Editor — minimal, flat, no focus ring */
 .note-editor {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.note-editor .rich-text-area {
+    -fx-border-color: transparent;
+    -fx-background-color: #ffffff;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.note-editor .rich-text-area:focused {
+    -fx-border-color: transparent;
+}
+
+.note-editor .scroll-pane {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent;
+}
+
+.note-editor .scroll-pane .viewport {
     -fx-background-color: #ffffff;
 }
 
@@ -142,8 +183,8 @@
     -fx-text-fill: #aaaaaa;
 }
 
-/* Split pane dividers */
-.split-pane > .split-pane-divider {
-    -fx-background-color: #e0e0e0;
-    -fx-padding: 0 1 0 1;
+/* Global — kill focus rings on all controls */
+.focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
 }
