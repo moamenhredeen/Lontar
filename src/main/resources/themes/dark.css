@@ -1,0 +1,151 @@
+/* Dark theme for Orgx */
+
+.root {
+    -fx-base: #1e1e1e;
+    -fx-background: #1e1e1e;
+    -fx-font-family: "System";
+    -fx-font-size: 14px;
+    -fx-text-fill: #d4d4d4;
+}
+
+/* File tree */
+.file-tree {
+    -fx-background-color: #252526;
+}
+
+.file-tree .tree-cell:selected {
+    -fx-background-color: #37373d;
+    -fx-text-fill: #e0e0e0;
+}
+
+/* Editor */
+.note-editor {
+    -fx-background-color: #1e1e1e;
+}
+
+/* Backlinks panel */
+.backlinks-panel {
+    -fx-background-color: #252526;
+}
+
+.backlink-card {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 8;
+}
+
+.backlink-card:hover {
+    -fx-background-color: #37373d;
+    -fx-border-color: #4e4e52;
+    -fx-cursor: hand;
+}
+
+.backlink-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: #e0e0e0;
+}
+
+.backlink-context {
+    -fx-text-fill: #999999;
+    -fx-font-size: 12px;
+}
+
+/* Status bar */
+.status-bar {
+    -fx-background-color: #007acc;
+    -fx-padding: 2 8;
+    -fx-font-size: 12px;
+}
+
+.status-bar .label {
+    -fx-text-fill: #ffffff;
+}
+
+/* Command palette */
+.command-palette {
+    -fx-background-color: #252526;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 16, 0, 0, 4);
+}
+
+.command-palette .text-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 16px;
+    -fx-padding: 12;
+    -fx-border-width: 0 0 1 0;
+    -fx-border-color: #3e3e42;
+}
+
+.command-palette .list-view {
+    -fx-background-color: transparent;
+}
+
+.command-palette .list-cell:selected {
+    -fx-background-color: #094771;
+    -fx-text-fill: #e0e0e0;
+}
+
+.palette-result-title {
+    -fx-font-size: 14px;
+    -fx-text-fill: #e0e0e0;
+}
+
+.palette-result-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #808080;
+}
+
+/* Wikilink styling */
+.wikilink {
+    -fx-fill: #569cd6;
+    -fx-cursor: hand;
+}
+
+/* Markdown heading sizes */
+.heading-1 { -fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #e0e0e0; }
+.heading-2 { -fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #e0e0e0; }
+.heading-3 { -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #e0e0e0; }
+.heading-4 { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #e0e0e0; }
+.heading-5 { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #e0e0e0; }
+.heading-6 { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #e0e0e0; }
+
+/* Code */
+.code-inline {
+    -fx-font-family: "Monospace";
+    -fx-background-color: #2d2d2d;
+    -fx-padding: 1 4;
+}
+
+.code-block {
+    -fx-font-family: "Monospace";
+    -fx-background-color: #1e1e1e;
+    -fx-padding: 8;
+}
+
+/* Blockquote */
+.blockquote {
+    -fx-border-color: #4e4e52;
+    -fx-border-width: 0 0 0 3;
+    -fx-padding: 4 8 4 12;
+}
+
+/* Syntax markers */
+.syntax-hidden {
+    -fx-font-size: 0;
+    -fx-opacity: 0;
+}
+
+.syntax-visible {
+    -fx-text-fill: #555555;
+}
+
+/* Split pane dividers */
+.split-pane > .split-pane-divider {
+    -fx-background-color: #3e3e42;
+    -fx-padding: 0 1 0 1;
+}
