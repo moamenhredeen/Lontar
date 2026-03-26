@@ -1,6 +1,5 @@
 package app.orgx.desktop.markdown;
 
-import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import org.commonmark.Extension;
@@ -28,7 +27,7 @@ public class MarkdownToModel {
     public record Result(StyledTextModel model, Set<String> wikiLinks, int headingCount) {}
 
     private static class ModelBuilder extends AbstractVisitor {
-        private final SimpleViewOnlyStyledModel model = new SimpleViewOnlyStyledModel();
+        private final EditableNoteModel model = new EditableNoteModel();
         private final Set<String> wikiLinks = new LinkedHashSet<>();
         private int headingCount = 0;
         private final Deque<StyleAttributeMap> styleStack = new ArrayDeque<>();
@@ -39,17 +38,20 @@ public class MarkdownToModel {
         }
 
         StyledTextModel build() {
-            // Ensure the model has at least one paragraph — SimpleViewOnlyStyledModel
-            // starts with 0 paragraphs, and RichTextArea crashes on empty models.
-            if (model.size() == 0) {
-                model.addSegment("", StyleAttributeMap.EMPTY);
-            }
             return model;
+        }
+
+        private void addText(String text, StyleAttributeMap style) {
+            model.appendText(text, style);
+        }
+
+        private void newLine() {
+            model.appendLineBreak();
         }
 
         @Override
         public void visit(Heading heading) {
-            if (!firstBlock) model.nl();
+            if (!firstBlock) newLine();
             firstBlock = false;
 
             headingCount++;
@@ -69,9 +71,8 @@ public class MarkdownToModel {
                     .build();
             styleStack.push(style);
 
-            // Add the markdown syntax prefix
             var prefix = "#".repeat(level) + " ";
-            model.addSegment(prefix, style);
+            addText(prefix, style);
 
             visitChildren(heading);
             styleStack.pop();
@@ -79,23 +80,23 @@ public class MarkdownToModel {
 
         @Override
         public void visit(Paragraph node) {
-            if (!firstBlock) model.nl();
+            if (!firstBlock) newLine();
             firstBlock = false;
             visitChildren(node);
         }
 
         @Override
         public void visit(Text text) {
-            model.addSegment(text.getLiteral(), currentStyle());
+            addText(text.getLiteral(), currentStyle());
         }
 
         @Override
         public void visit(Emphasis emphasis) {
             var style = StyleAttributeMap.builder().setItalic(true).build();
             styleStack.push(mergeStyles(currentStyle(), style));
-            model.addSegment("*", currentStyle());
+            addText("*", currentStyle());
             visitChildren(emphasis);
-            model.addSegment("*", currentStyle());
+            addText("*", currentStyle());
             styleStack.pop();
         }
 
@@ -103,9 +104,9 @@ public class MarkdownToModel {
         public void visit(StrongEmphasis strongEmphasis) {
             var style = StyleAttributeMap.builder().setBold(true).build();
             styleStack.push(mergeStyles(currentStyle(), style));
-            model.addSegment("**", currentStyle());
+            addText("**", currentStyle());
             visitChildren(strongEmphasis);
-            model.addSegment("**", currentStyle());
+            addText("**", currentStyle());
             styleStack.pop();
         }
 
@@ -114,20 +115,19 @@ public class MarkdownToModel {
             var style = StyleAttributeMap.builder()
                     .setFontFamily("Monospace")
                     .build();
-            model.addSegment("`" + code.getLiteral() + "`", style);
+            addText("`" + code.getLiteral() + "`", style);
         }
 
         @Override
         public void visit(FencedCodeBlock codeBlock) {
-            if (!firstBlock) model.nl();
+            if (!firstBlock) newLine();
             firstBlock = false;
 
             var style = StyleAttributeMap.builder()
                     .setFontFamily("Monospace")
                     .build();
-            model.addSegment("```" + (codeBlock.getInfo() != null ? codeBlock.getInfo() : ""), style);
+            addText("```" + (codeBlock.getInfo() != null ? codeBlock.getInfo() : ""), style);
 
-            // Add code lines (trim trailing newline from commonmark literal)
             var literal = codeBlock.getLiteral();
             if (literal != null && !literal.isEmpty()) {
                 if (literal.endsWith("\n")) {
@@ -135,13 +135,13 @@ public class MarkdownToModel {
                 }
                 var lines = literal.split("\n", -1);
                 for (var line : lines) {
-                    model.nl();
-                    model.addSegment(line, style);
+                    newLine();
+                    addText(line, style);
                 }
             }
 
-            model.nl();
-            model.addSegment("```", style);
+            newLine();
+            addText("```", style);
         }
 
         @Override
@@ -156,14 +156,12 @@ public class MarkdownToModel {
 
         @Override
         public void visit(ListItem listItem) {
-            if (!firstBlock) model.nl();
+            if (!firstBlock) newLine();
             firstBlock = false;
-            model.addSegment("- ", currentStyle());
-            // Visit children but skip the inner paragraph's newline handling
+            addText("- ", currentStyle());
             var child = listItem.getFirstChild();
             while (child != null) {
                 if (child instanceof Paragraph) {
-                    // Visit paragraph children directly to avoid extra newline
                     var inlineChild = child.getFirstChild();
                     while (inlineChild != null) {
                         inlineChild.accept(this);
@@ -178,13 +176,12 @@ public class MarkdownToModel {
 
         @Override
         public void visit(BlockQuote blockQuote) {
-            if (!firstBlock) model.nl();
+            if (!firstBlock) newLine();
             firstBlock = false;
 
             var style = StyleAttributeMap.builder().setItalic(true).build();
             styleStack.push(mergeStyles(currentStyle(), style));
-            model.addSegment("> ", currentStyle());
-            // Visit children but skip the inner paragraph's newline handling
+            addText("> ", currentStyle());
             var child = blockQuote.getFirstChild();
             while (child != null) {
                 if (child instanceof Paragraph) {
@@ -203,27 +200,26 @@ public class MarkdownToModel {
 
         @Override
         public void visit(ThematicBreak thematicBreak) {
-            if (!firstBlock) model.nl();
+            if (!firstBlock) newLine();
             firstBlock = false;
-            model.addSegment("---", currentStyle());
+            addText("---", currentStyle());
         }
 
         @Override
         public void visit(SoftLineBreak softLineBreak) {
-            model.nl();
+            newLine();
         }
 
         @Override
         public void visit(HardLineBreak hardLineBreak) {
-            model.nl();
+            newLine();
         }
 
         @Override
         public void visit(CustomNode node) {
             if (node instanceof WikiLinkNode wikiLink) {
                 wikiLinks.add(wikiLink.getTarget());
-                var style = currentStyle();
-                model.addSegment("[[" + wikiLink.getTarget() + "]]", style);
+                addText("[[" + wikiLink.getTarget() + "]]", currentStyle());
             } else {
                 visitChildren(node);
             }
@@ -231,15 +227,15 @@ public class MarkdownToModel {
 
         @Override
         public void visit(Link link) {
-            model.addSegment("[", currentStyle());
+            addText("[", currentStyle());
             visitChildren(link);
-            model.addSegment("](" + link.getDestination() + ")", currentStyle());
+            addText("](" + link.getDestination() + ")", currentStyle());
         }
 
         @Override
         public void visit(Image image) {
             var alt = image.getTitle() != null ? image.getTitle() : "";
-            model.addSegment("![" + alt + "](" + image.getDestination() + ")", currentStyle());
+            addText("![" + alt + "](" + image.getDestination() + ")", currentStyle());
         }
 
         private StyleAttributeMap currentStyle() {
