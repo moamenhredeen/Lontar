@@ -7,6 +7,7 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -53,6 +54,7 @@ public class OrgxApplication extends Application {
                 context.shutdown();
             } catch (IOException ignored) {}
         });
+        stage.initStyle(StageStyle.EXTENDED);
         stage.show();
 
         // Open last vault or prompt for one
